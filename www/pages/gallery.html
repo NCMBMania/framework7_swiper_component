@@ -1,0 +1,88 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="title">スワイパー</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="gallery">
+      <div
+        data-pagination='{"el": ".swiper-pagination"}'
+        data-space-between="10"
+        data-slides-per-view="1"
+        class="swiper-container swiper-init"
+      >
+        <div class="swiper-wrapper">
+          ${ photos.map(photo => $h`
+            <div class="swiper-slide">
+              <a href="${photo.url}">
+                <img
+                  src="https://mbaas.api.nifcloud.com/2013-09-01/applications/${appId}/publicFiles/${photo.fileName}"
+                  class="photo"
+                  @load=${load}
+                />
+              </a>
+            </div>
+          `)}
+        </div>
+        <div class="swiper-pagination"></div>
+      </div>
+    </div>
+    </div>
+  </div>
+</template>
+<style>
+  .swiper-slide {
+    width: 80%;
+  }
+  .photo {
+    width: 100%;
+    object-fit: cover;
+  }
+</style>
+<script>
+  export default function (props, {$f7, $onMounted, $update }) {
+    const prefix = `${props.name}`; // 表示対象のファイル名（前方一致）
+    const appId = 'MKpbJPxaTIU5m1nW'; // アプリID
+    let photos = []; // 取得した画像のURLを入れる変数
+    let loadCount = 0; // 読み込み完了した画像の数
+    $onMounted(async () => {
+      // 読み込み完了画像カウントのリセット
+      loadCount = 0;
+      reset();
+      // ローディングアイコンを表示
+      app.preloader.show();
+      // 写真を取得します
+      photos = await getPhotos();
+      // 表示を更新
+      $update();
+      // ローディングを消します
+    });
+
+    // 画像が読み込まれると呼ばれる関数です
+    const load = (e) => {
+      // 読み込み完了画像のカウンターを1上げます
+      loadCount += 1;
+      // 全画像が読み込み終わるまで待ちます
+      if (loadCount < photos.length) return;
+      // 画像の幅を取得
+      const width = $('.photo').width();
+      // 全画像の高さを幅と同じ（正方形）にします
+      $('.photo').css('height', `${width}px`);
+      const swiper = app.swiper.get('.swiper-container');
+      swiper.update();
+      // ギャラリーを表示します
+      app.preloader.hide();
+    };
+
+    const getPhotos = () => {
+      return ncmb.DataStore('Photo')
+        .regularExpressionTo('fileName', `${prefix}.*`)
+        .limit(100)
+        .fetchAll();
+    }
+    return $render;
+  }
+</script>
